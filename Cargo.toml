@@ -1,8 +1,15 @@
 [package]
 name = "picture_cleaner"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 eframe = "0.33.3"
 image = "0.25.9"
+
+
+[dev-dependencies]
+dhat = "0.3"
+
+[features]
+dhat-heap = []

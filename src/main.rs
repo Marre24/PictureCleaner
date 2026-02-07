@@ -1,3 +1,5 @@
+mod memory_leak_test;
+
 use eframe::egui;
 
 fn main() {
@@ -14,7 +16,16 @@ struct MyEguiApp {}
 
 impl MyEguiApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self::default()
+        Self::new_internal()
+    }
+
+    #[cfg(test)]
+    pub fn new_for_testing() -> Self {
+        Self::new_internal()
+    }
+
+    fn new_internal() -> Self {
+        Self {}
     }
 }
 
