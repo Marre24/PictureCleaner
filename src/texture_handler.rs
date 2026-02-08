@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, TextureHandle};
+use image::GenericImageView;
 
 #[derive(Default)]
 pub(crate) struct TextureHandler {
@@ -9,42 +10,51 @@ pub(crate) struct TextureHandler {
 }
 
 impl TextureHandler {
+    const MAX_SIZE: u32 = 400;
+
     pub(crate) fn get_image_from_path(
         &mut self,
-        path: &PathBuf,
+        path: &Path,
         ctx: &egui::Context,
     ) -> Option<&TextureHandle> {
-        if self.texture_map.contains_key(path) {
-            return self.texture_map.get(path);
+        use std::collections::hash_map::Entry;
+
+        match self.texture_map.entry(path.to_path_buf()) {
+            Entry::Occupied(entry) => Some(entry.into_mut()),
+            Entry::Vacant(entry) => {
+                let texture = Self::load_texture(path, ctx)?;
+                Some(entry.insert(texture))
+            }
         }
+    }
 
-        let image_bytes = match std::fs::read(path) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                println!("Could not read image file: {}", e);
-                return None;
-            }
+    fn load_texture(path: &Path, ctx: &egui::Context) -> Option<TextureHandle> {
+        let image_bytes = std::fs::read(path).ok()?;
+
+        let image = image::load_from_memory(&image_bytes).ok()?;
+
+        let (width, height) = image.dimensions();
+        let (new_width, new_height) = if width > height {
+            let ratio = Self::MAX_SIZE as f32 / width as f32;
+            (Self::MAX_SIZE, (height as f32 * ratio) as u32)
+        } else {
+            let ratio = Self::MAX_SIZE as f32 / height as f32;
+            ((width as f32 * ratio) as u32, Self::MAX_SIZE)
         };
 
-        let image = match image::load_from_memory(&image_bytes) {
-            Ok(img) => img,
-            Err(e) => {
-                println!("Could not decode image: {}", e);
-                return None;
-            }
-        };
+        let resized =
+            image.resize_exact(new_width, new_height, image::imageops::FilterType::Nearest);
 
-        let size = [image.width() as _, image.height() as _];
-        let image_buffer = image.to_rgba8();
-        let pixels = image_buffer.as_flat_samples();
+        let size = [resized.width() as usize, resized.height() as usize];
 
-        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
+        let image_buffer = resized.to_rgba8();
 
-        self.texture_map.insert(
-            path.to_path_buf(),
-            ctx.load_texture("my-image", color_image, Default::default()),
-        );
+        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, image_buffer.as_raw());
 
-        self.texture_map.get(path)
+        Some(ctx.load_texture(
+            path.file_name()?.to_str()?,
+            color_image,
+            egui::TextureOptions::LINEAR,
+        ))
     }
 }
