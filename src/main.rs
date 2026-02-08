@@ -1,12 +1,15 @@
 mod file_manager;
 mod memory_leak_test;
 mod picture_list;
+mod texture_handler;
 
-use std::{collections::LinkedList, num::NonZero, path::PathBuf};
+use std::collections::LinkedList;
 
 use eframe::egui;
 
-use crate::{file_manager::get_picture_list_for, picture_list::PictureList};
+use crate::{
+    file_manager::get_picture_list_for, picture_list::PictureList, texture_handler::TextureHandler,
+};
 
 #[derive(Default)]
 enum Scene {
@@ -32,8 +35,7 @@ struct MyEguiApp {
     history: LinkedList<bool>,
     path_field: String,
     current_scene: Scene,
-    texture: Option<egui::TextureHandle>,
-    changed: bool,
+    texture_manager: TextureHandler,
 }
 
 impl MyEguiApp {
@@ -47,16 +49,7 @@ impl MyEguiApp {
     }
 
     fn new_internal() -> Self {
-        MyEguiApp {
-            unchecked_pics: PictureList::default(),
-            saved_pics: PictureList::default(),
-            deleted_pics: PictureList::default(),
-            history: LinkedList::default(),
-            path_field: String::default(),
-            current_scene: Scene::default(),
-            texture: None,
-            changed: true,
-        }
+        Self::default()
     }
 
     fn init(&mut self) {
@@ -79,67 +72,24 @@ impl MyEguiApp {
         });
     }
 
-    fn get_image_from_path(&mut self, ctx: &egui::Context) {
-        if !self.changed {
-            return;
-        }
-        self.changed = false;
-
-        let path = self.unchecked_pics.peek();
-
-        let image_bytes = match std::fs::read(path) {
-            Ok(bytes) => bytes,
-            Err(e) => {
-                println!("Could not read image file: {}", e);
-                return;
-            }
-        };
-
-        let image = match image::load_from_memory(&image_bytes) {
-            Ok(img) => img,
-            Err(e) => {
-                println!("Could not decode image: {}", e);
-                return;
-            }
-        };
-
-        let size = [image.width() as _, image.height() as _];
-        let image_buffer = image.to_rgba8();
-        let pixels = image_buffer.as_flat_samples();
-
-        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
-
-        let texture = ctx.load_texture("my-image", color_image, Default::default());
-        self.texture = Some(texture);
-    }
-
     fn image_deleter_scene(&mut self, ctx: &egui::Context) {
-        self.get_image_from_path(ctx);
-
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("PURGE THESE PICTURES");
-            if let Some(texture) = &self.texture {
-                ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(600.0, 600.0)));
-            } else {
-                ui.label("No image to display");
-            }
+            self.update_image(ctx, ui);
             ui.horizontal_centered(|ui| {
                 ui.label("pictures left to purge: ");
                 ui.label(self.unchecked_pics.size().to_string());
                 if ui.button("DELETE").clicked() {
-                    self.changed = true;
                     self.deleted_pics.transfer_from(&mut self.unchecked_pics);
                     self.history.push_front(false);
-                    self.get_image_from_path(ctx);
+                    self.update_image(ctx, ui);
                 }
                 if ui.button("SAVE").clicked() {
-                    self.changed = true;
                     self.saved_pics.transfer_from(&mut self.unchecked_pics);
                     self.history.push_front(true);
-                    self.get_image_from_path(ctx);
+                    self.update_image(ctx, ui);
                 }
                 if ui.button("REVERT").clicked() {
-                    self.changed = true;
                     if self.history.is_empty() {
                         println!("Empty history, cannot revert");
                         return;
@@ -152,6 +102,17 @@ impl MyEguiApp {
                 }
             });
         });
+    }
+
+    fn update_image(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        if let Some(texture) = self
+            .texture_manager
+            .get_image_from_path(self.unchecked_pics.peek(), ctx)
+        {
+            ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(600.0, 600.0)));
+        } else {
+            ui.label("No image to display");
+        }
     }
 }
 
