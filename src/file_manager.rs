@@ -7,7 +7,7 @@ use std::{
 
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"];
 
-fn get_picture_list_for(dir: &str) -> PictureList {
+pub(crate) fn get_picture_list_for(dir: &str) -> PictureList {
     let mut pl: PictureList = Default::default();
 
     add_paths_to(&mut pl, fs::read_dir(dir));

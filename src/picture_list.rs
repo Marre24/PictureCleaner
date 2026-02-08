@@ -20,6 +20,12 @@ impl PictureList {
             .expect("attempted to get item from empty PictureList")
     }
 
+    pub(crate) fn peek(&self) -> &PathBuf {
+        self.value
+            .front()
+            .expect("attempted to peek from empty PictureList")
+    }
+
     pub(crate) fn transfer_from(&mut self, other: &mut PictureList) {
         self.add(other.next());
     }
