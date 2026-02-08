@@ -1,3 +1,4 @@
+mod file_manager;
 mod memory_leak_test;
 mod picture_list;
 
