@@ -1,26 +1,26 @@
 use std::{collections::LinkedList, path::PathBuf};
 
 #[derive(Default)]
-struct PictureList {
+pub(crate) struct PictureList {
     value: LinkedList<PathBuf>,
 }
 
 impl PictureList {
-    fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.value.len()
     }
 
-    fn add(&mut self, path: PathBuf) {
+    pub(crate) fn add(&mut self, path: PathBuf) {
         self.value.push_front(path);
     }
 
-    fn next(&mut self) -> PathBuf {
+    pub(crate) fn next(&mut self) -> PathBuf {
         self.value
             .pop_front()
             .expect("attempted to get item from empty PictureList")
     }
 
-    fn transfer_from(&mut self, other: &mut PictureList) {
+    pub(crate) fn transfer_from(&mut self, other: &mut PictureList) {
         self.add(other.next());
     }
 }
