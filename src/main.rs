@@ -1,4 +1,5 @@
 mod memory_leak_test;
+mod picture_list;
 
 use eframe::egui;
 
