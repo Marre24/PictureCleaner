@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{collections::LinkedList, path::PathBuf};
 
 #[derive(Default)]
 struct PictureList {
-    value: Vec<PathBuf>,
+    value: LinkedList<PathBuf>,
 }
 
 impl PictureList {
@@ -11,7 +11,17 @@ impl PictureList {
     }
 
     fn add(&mut self, path: PathBuf) {
-        self.value.insert(0, path);
+        self.value.push_front(path);
+    }
+
+    fn next(&mut self) -> PathBuf {
+        self.value
+            .pop_front()
+            .expect("attempted to get item from empty PictureList")
+    }
+
+    fn transfer_from(&mut self, other: &mut PictureList) {
+        self.add(other.next());
     }
 }
 
@@ -29,12 +39,53 @@ mod picture_list_test {
 
     #[test]
     fn size_increments_when_adding_item() {
-        let PATH: PathBuf = PathBuf::from("GREEN/FN");
+        let path: PathBuf = PathBuf::from("GREEN/FN");
         let mut pl = PictureList::default();
         let size = pl.size();
 
-        pl.add(PATH);
+        pl.add(path);
 
         assert_eq!(size + 1, pl.size());
+    }
+
+    #[test]
+    fn gets_first_item() {
+        let path: PathBuf = PathBuf::from("GREEN/FN");
+        let mut pl = PictureList::default();
+        pl.add(path.clone());
+
+        let next: PathBuf = pl.next();
+
+        assert_eq!(path, next);
+    }
+
+    #[test]
+    fn next_decreases_size() {
+        let path: PathBuf = PathBuf::from("GREEN/FN");
+        let mut pl = PictureList::default();
+        pl.add(path.clone());
+        let size = pl.size();
+
+        pl.next();
+
+        assert_eq!(size - 1, pl.size());
+    }
+
+    #[test]
+    fn size_moves_when_moving_item() {
+        let path: PathBuf = PathBuf::from("GREEN/FN");
+        let mut pl1 = PictureList::default();
+        let mut pl2 = PictureList::default();
+        pl1.add(path.clone());
+        pl1.add(path.clone());
+        pl2.add(path.clone());
+        pl2.add(path.clone());
+        let size1 = pl1.size();
+        let size2 = pl2.size();
+
+        pl1.transfer_from(&mut pl2);
+
+        assert_eq!(size1 + 1, pl1.size());
+        assert_eq!(size2 - 1, pl2.size());
     }
 }
