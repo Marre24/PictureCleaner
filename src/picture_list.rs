@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct PictureList {
     value: LinkedList<PathBuf>,
 }

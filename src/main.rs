@@ -50,8 +50,9 @@ impl MyEguiApp {
     }
 
     fn init(&mut self) {
-        self.picture_handler
-            .init(get_picture_list_for(self.path_field.as_str()));
+        let pl = get_picture_list_for(self.path_field.as_str());
+        self.texture_manager.init(pl.clone());
+        self.picture_handler.init(pl);
     }
 
     fn path_searcher_scene(&mut self, ctx: &egui::Context) {
@@ -73,7 +74,7 @@ impl MyEguiApp {
     fn image_deleter_scene(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("PURGE THESE PICTURES");
-            self.update_image(ui);
+            self.update_image(ui, ctx);
             ui.horizontal_centered(|ui| {
                 ui.label("pictures left to purge: ");
                 ui.label(self.picture_handler.images_left());
@@ -90,16 +91,20 @@ impl MyEguiApp {
         });
     }
 
-    fn update_image(&mut self, ui: &mut egui::Ui) {
-        if let Some(texture) = self.texture_manager.get(self.picture_handler.get_next()) {
+    fn update_image(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let maybe_texture = self
+            .texture_manager
+            .get(self.picture_handler.get_next(), ctx);
+
+        if let Some(texture) = maybe_texture {
             ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(600.0, 600.0)));
-        } else {
-            ui.vertical_centered(|ui| {
-                ui.spinner();
-                ui.label("Loading images...");
-            });
             return;
         }
+
+        ui.vertical_centered(|ui| {
+            ui.spinner();
+            ui.label("Loading images...");
+        });
     }
 }
 

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-use eframe::egui::{self, TextureHandle};
-use eframe::epaint::tessellator::path;
+use eframe::egui::{self, ColorImage, TextureHandle};
 use image::GenericImageView;
 
 use crate::picture_list::PictureList;
@@ -10,22 +11,34 @@ use crate::picture_list::PictureList;
 #[derive(Default)]
 pub(crate) struct TextureHandler {
     texture_map: HashMap<PathBuf, TextureHandle>,
+    pending: Arc<Mutex<Vec<(PathBuf, String, ColorImage)>>>,
 }
 
 impl TextureHandler {
     const MAX_SIZE: u32 = 400;
 
-    pub(crate) fn get(&mut self, path: &Path) -> Option<&TextureHandle> {
+    pub(crate) fn get(&mut self, path: &Path, ctx: &egui::Context) -> Option<&TextureHandle> {
+        let mut pending = self.pending.lock().unwrap();
+        for (path, name, color_image) in pending.drain(..) {
+            let img = ctx.load_texture(&name, color_image, egui::TextureOptions::LINEAR);
+            self.texture_map.insert(path, img);
+        }
+        drop(pending);
+
         self.texture_map.get(path)
     }
 
-    pub(crate) fn init(&mut self, ctx: &egui::Context, unchecked_pics: PictureList) {
-        for path in unchecked_pics.path_iterator() {
-            self.load_texture(path, ctx);
-        }
+    pub(crate) fn init(&mut self, unchecked_pics: PictureList) {
+        let pending = Arc::clone(&self.pending);
+
+        thread::spawn(move || {
+            for path in unchecked_pics.path_iterator() {
+                Self::load_texture(path, &pending);
+            }
+        });
     }
 
-    fn load_texture(&mut self, path: &Path, ctx: &egui::Context) {
+    fn load_texture(path: &Path, pending: &Arc<Mutex<Vec<(PathBuf, String, ColorImage)>>>) {
         let maybe_image_bytes = std::fs::read(path);
         if let Err(e) = maybe_image_bytes {
             print!("Could not get image bytes: {}", e);
@@ -65,7 +78,9 @@ impl TextureHandler {
         }
         let file_name = maybe_file_name.unwrap().to_str().unwrap();
 
-        let img = ctx.load_texture(file_name, color_image, egui::TextureOptions::LINEAR);
-        self.texture_map.insert(path.to_path_buf(), img);
+        pending
+            .lock()
+            .unwrap()
+            .push((path.to_path_buf(), file_name.to_string(), color_image));
     }
 }
