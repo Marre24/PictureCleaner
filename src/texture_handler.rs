@@ -12,6 +12,10 @@ pub(crate) struct TextureHandler {
 impl TextureHandler {
     const MAX_SIZE: u32 = 400;
 
+    pub(crate) fn get(&mut self, path: &Path) -> Option<&TextureHandle> {
+        self.texture_map.get(path)
+    }
+
     pub(crate) fn get_image_from_path(
         &mut self,
         path: &Path,

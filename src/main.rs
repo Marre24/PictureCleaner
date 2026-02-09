@@ -75,19 +75,17 @@ impl MyEguiApp {
     fn image_deleter_scene(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("PURGE THESE PICTURES");
-            self.update_image(ctx, ui);
+            self.update_image(ui);
             ui.horizontal_centered(|ui| {
                 ui.label("pictures left to purge: ");
                 ui.label(self.unchecked_pics.size().to_string());
                 if ui.button("DELETE").clicked() {
                     self.deleted_pics.transfer_from(&mut self.unchecked_pics);
                     self.history.push_front(false);
-                    self.update_image(ctx, ui);
                 }
                 if ui.button("SAVE").clicked() {
                     self.saved_pics.transfer_from(&mut self.unchecked_pics);
                     self.history.push_front(true);
-                    self.update_image(ctx, ui);
                 }
                 if ui.button("REVERT").clicked() {
                     if self.history.is_empty() {
@@ -104,14 +102,15 @@ impl MyEguiApp {
         });
     }
 
-    fn update_image(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
-        if let Some(texture) = self
-            .texture_manager
-            .get_image_from_path(self.unchecked_pics.peek(), ctx)
-        {
+    fn update_image(&mut self, ui: &mut egui::Ui) {
+        if let Some(texture) = self.texture_manager.get(self.unchecked_pics.peek()) {
             ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(600.0, 600.0)));
         } else {
-            ui.label("No image to display");
+            ui.vertical_centered(|ui| {
+                ui.spinner();
+                ui.label("Loading images...");
+            });
+            return;
         }
     }
 }
