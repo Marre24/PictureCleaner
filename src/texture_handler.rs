@@ -15,7 +15,8 @@ pub(crate) struct TextureHandler {
 }
 
 impl TextureHandler {
-    const MAX_SIZE: u32 = 400;
+    const MAX_SIZE: u32 = 200;
+    const NUM_THREADS: usize = 2;
 
     pub(crate) fn get(&mut self, path: &Path, ctx: &egui::Context) -> Option<&TextureHandle> {
         let mut pending = self.pending.lock().unwrap();
@@ -34,28 +35,42 @@ impl TextureHandler {
 
     pub(crate) fn init(&mut self, unchecked_pics: PictureList) {
         let pending = Arc::clone(&self.pending);
+        let paths: Vec<PathBuf> = unchecked_pics.path_iterator().cloned().collect();
 
-        thread::spawn(move || {
-            for path in unchecked_pics.path_iterator() {
-                Self::load_texture(path, &pending);
-            }
-        });
+        let chunk_size = (paths.len() + Self::NUM_THREADS - 1) / Self::NUM_THREADS;
+
+        pending.lock().unwrap().reserve(paths.len());
+
+        for chunk in paths.chunks(chunk_size) {
+            let pending = Arc::clone(&pending);
+            let chunk = chunk.to_vec();
+
+            thread::spawn(move || {
+                for path in chunk {
+                    Self::load_texture(&path, &pending);
+                }
+            });
+        }
     }
 
     fn load_texture(path: &Path, pending: &Arc<Mutex<Vec<(PathBuf, String, ColorImage)>>>) {
-        let maybe_image_bytes = std::fs::read(path);
-        if let Err(e) = maybe_image_bytes {
-            print!("Could not get image bytes: {}", e);
-            return;
-        }
-        let image_bytes = maybe_image_bytes.unwrap();
+        use image::DynamicImage;
 
-        let maybe_image = image::load_from_memory(&image_bytes);
-        if let Err(e) = maybe_image {
-            print!("Could not load image: {}", e);
-            return;
-        }
-        let image = maybe_image.unwrap();
+        let image_bytes = match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                eprintln!("Could not get image bytes for {:?}: {}", path, e);
+                return;
+            }
+        };
+
+        let image = match image::load_from_memory(&image_bytes) {
+            Ok(img) => img,
+            Err(e) => {
+                eprintln!("Could not load image {:?}: {}", path, e);
+                return;
+            }
+        };
 
         let (width, height) = image.dimensions();
         let (new_width, new_height) = if width > height {
@@ -66,25 +81,28 @@ impl TextureHandler {
             ((width as f32 * ratio) as u32, Self::MAX_SIZE)
         };
 
-        let resized =
-            image.resize_exact(new_width, new_height, image::imageops::FilterType::Nearest);
+        let resized = image.resize(new_width, new_height, image::imageops::FilterType::Triangle);
 
         let size = [resized.width() as usize, resized.height() as usize];
 
-        let image_buffer = resized.to_rgba8();
+        let image_buffer = match resized {
+            DynamicImage::ImageRgba8(buf) => buf,
+            _ => resized.to_rgba8(),
+        };
 
-        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, image_buffer.as_raw());
+        let color_image = ColorImage::from_rgba_unmultiplied(size, image_buffer.as_raw());
 
-        let maybe_file_name = path.file_name();
-        if let None = maybe_file_name {
-            print!("Could not find file name");
-            return;
-        }
-        let file_name = maybe_file_name.unwrap().to_str().unwrap();
+        let file_name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name.to_string(),
+            None => {
+                eprintln!("Could not find file name for {:?}", path);
+                return;
+            }
+        };
 
         pending
             .lock()
             .unwrap()
-            .push((path.to_path_buf(), file_name.to_string(), color_image));
+            .push((path.to_path_buf(), file_name, color_image));
     }
 }
