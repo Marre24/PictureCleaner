@@ -28,6 +28,10 @@ impl TextureHandler {
         self.texture_map.get(path)
     }
 
+    pub(crate) fn loaded_images(&self) -> String {
+        (self.pending.lock().unwrap().len() + self.texture_map.len()).to_string()
+    }
+
     pub(crate) fn init(&mut self, unchecked_pics: PictureList) {
         let pending = Arc::clone(&self.pending);
 

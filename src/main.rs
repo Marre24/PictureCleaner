@@ -87,6 +87,8 @@ impl MyEguiApp {
                 if ui.button("REVERT").clicked() {
                     self.picture_handler.revert_last_action();
                 }
+                ui.label("pictures loaded: ");
+                ui.label(self.texture_manager.loaded_images());
             });
         });
     }
