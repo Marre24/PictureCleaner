@@ -1,14 +1,14 @@
 mod file_manager;
 mod memory_leak_test;
 mod picture_list;
+mod picutre_handler;
 mod texture_handler;
-
-use std::collections::LinkedList;
 
 use eframe::egui;
 
 use crate::{
-    file_manager::get_picture_list_for, picture_list::PictureList, texture_handler::TextureHandler,
+    file_manager::get_picture_list_for, picutre_handler::PictureHandler,
+    texture_handler::TextureHandler,
 };
 
 #[derive(Default)]
@@ -29,13 +29,10 @@ fn main() {
 
 #[derive(Default)]
 struct MyEguiApp {
-    unchecked_pics: PictureList,
-    saved_pics: PictureList,
-    deleted_pics: PictureList,
-    history: LinkedList<bool>,
     path_field: String,
     current_scene: Scene,
     texture_manager: TextureHandler,
+    picture_handler: PictureHandler,
 }
 
 impl MyEguiApp {
@@ -53,7 +50,8 @@ impl MyEguiApp {
     }
 
     fn init(&mut self) {
-        self.unchecked_pics = get_picture_list_for(self.path_field.as_str());
+        self.picture_handler
+            .init(get_picture_list_for(self.path_field.as_str()));
     }
 
     fn path_searcher_scene(&mut self, ctx: &egui::Context) {
@@ -78,32 +76,22 @@ impl MyEguiApp {
             self.update_image(ui);
             ui.horizontal_centered(|ui| {
                 ui.label("pictures left to purge: ");
-                ui.label(self.unchecked_pics.size().to_string());
+                ui.label(self.picture_handler.images_left());
                 if ui.button("DELETE").clicked() {
-                    self.deleted_pics.transfer_from(&mut self.unchecked_pics);
-                    self.history.push_front(false);
+                    self.picture_handler.delete();
                 }
                 if ui.button("SAVE").clicked() {
-                    self.saved_pics.transfer_from(&mut self.unchecked_pics);
-                    self.history.push_front(true);
+                    self.picture_handler.save();
                 }
                 if ui.button("REVERT").clicked() {
-                    if self.history.is_empty() {
-                        println!("Empty history, cannot revert");
-                        return;
-                    }
-                    if self.history.pop_front().unwrap() {
-                        self.unchecked_pics.transfer_from(&mut self.saved_pics);
-                    } else {
-                        self.unchecked_pics.transfer_from(&mut self.deleted_pics);
-                    }
+                    self.picture_handler.revert_last_action();
                 }
             });
         });
     }
 
     fn update_image(&mut self, ui: &mut egui::Ui) {
-        if let Some(texture) = self.texture_manager.get(self.unchecked_pics.peek()) {
+        if let Some(texture) = self.texture_manager.get(self.picture_handler.get_next()) {
             ui.add(egui::Image::new(texture).fit_to_exact_size(egui::vec2(600.0, 600.0)));
         } else {
             ui.vertical_centered(|ui| {

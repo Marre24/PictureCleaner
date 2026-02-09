@@ -1,4 +1,7 @@
-use std::{collections::LinkedList, path::PathBuf};
+use std::{
+    collections::{linked_list::Iter, LinkedList},
+    path::PathBuf,
+};
 
 #[derive(Default)]
 pub(crate) struct PictureList {
@@ -28,6 +31,10 @@ impl PictureList {
 
     pub(crate) fn transfer_from(&mut self, other: &mut PictureList) {
         self.add(other.next());
+    }
+
+    pub(crate) fn path_iterator(&self) -> Iter<PathBuf> {
+        self.value.iter()
     }
 }
 
