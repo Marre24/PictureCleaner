@@ -87,13 +87,24 @@ impl MyEguiApp {
                 if ui.button("REVERT").clicked() {
                     self.picture_handler.revert_last_action();
                 }
+
                 ui.label("pictures loaded: ");
                 ui.label(self.texture_manager.loaded_images());
+                if ui.button("COMMIT PICTURES").clicked() {
+                    self.picture_handler.commit(&self.path_field);
+                    self.current_scene = Scene::PathChecker;
+                }
             });
         });
     }
 
     fn update_image(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        if self.picture_handler.is_done() {
+            self.picture_handler.commit(&self.path_field);
+            self.current_scene = Scene::PathChecker;
+            return;
+        }
+
         let maybe_texture = self
             .texture_manager
             .get(self.picture_handler.get_next(), ctx);

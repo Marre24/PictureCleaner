@@ -1,6 +1,6 @@
 use std::collections::LinkedList;
 
-use crate::picture_list::PictureList;
+use crate::{file_manager::commit_state, picture_list::PictureList};
 
 #[derive(Default)]
 pub(crate) struct PictureHandler {
@@ -42,5 +42,13 @@ impl PictureHandler {
 
     pub(crate) fn get_next(&self) -> &std::path::Path {
         self.unchecked_pics.peek()
+    }
+
+    pub(crate) fn commit(&self, src_folder: &str) {
+        commit_state(src_folder, &self.saved_pics, &self.deleted_pics);
+    }
+
+    pub(crate) fn is_done(&self) -> bool {
+        self.unchecked_pics.size() == 0
     }
 }

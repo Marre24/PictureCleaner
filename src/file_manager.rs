@@ -6,6 +6,39 @@ use std::{
 };
 
 const IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg"];
+const SAVE_DIR: &str = "/save/";
+const DELETE_DIR: &str = "/delete/";
+
+pub(crate) fn commit_state(src_folder: &str, save: &PictureList, delete: &PictureList) {
+    move_each_picture_to(save, format!("{}{}", src_folder, SAVE_DIR));
+    move_each_picture_to(delete, format!("{}{}", src_folder, DELETE_DIR));
+}
+
+fn move_each_picture_to(save: &PictureList, save_dir: String) {
+    let result = fs::create_dir_all(&save_dir);
+    if let Err(e) = result {
+        println!("Could not move file: {} error: ", e)
+    }
+
+    for image in save.path_iterator() {
+        let maybe_file_name = image.file_name();
+        if maybe_file_name.is_none() {
+            continue;
+        }
+        let file_name = maybe_file_name.unwrap().to_str().unwrap();
+
+        let to = PathBuf::from(format!("{}{}", save_dir, file_name));
+        let result = fs::rename(image, &to);
+        if let Err(e) = result {
+            println!(
+                "Could not move file: {} to: {}, ERROR: {}",
+                image.clone().into_os_string().into_string().unwrap(),
+                to.clone().into_os_string().into_string().unwrap(),
+                e
+            )
+        }
+    }
+}
 
 pub(crate) fn get_picture_list_for(dir: &str) -> PictureList {
     let mut pl: PictureList = Default::default();
