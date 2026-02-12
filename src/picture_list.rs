@@ -9,6 +9,10 @@ pub(crate) struct PictureList {
 }
 
 impl PictureList {
+    pub(crate) fn new(ll: LinkedList<PathBuf>) -> PictureList {
+        PictureList { value: ll }
+    }
+
     pub(crate) fn size(&self) -> usize {
         self.value.len()
     }

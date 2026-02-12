@@ -1,5 +1,6 @@
 use crate::picture_list::PictureList;
 use std::{
+    collections::LinkedList,
     fs::{self, ReadDir},
     io::Error,
     path::PathBuf,
@@ -41,14 +42,26 @@ fn move_each_picture_to(save: &PictureList, save_dir: String) {
 }
 
 pub(crate) fn get_picture_list_for(dir: &str) -> PictureList {
-    let mut pl: PictureList = Default::default();
+    let mut pl: Vec<PathBuf> = Default::default();
 
     add_paths_to(&mut pl, fs::read_dir(dir));
 
-    pl
+    pl.sort_by(|a, b| {
+        a.file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .cmp(b.file_name().unwrap().to_str().unwrap())
+    });
+
+    let ll: LinkedList<PathBuf> = pl.into_iter().collect();
+    for item in &ll {
+        println!("Found: {}", item.display());
+    }
+    PictureList::new(ll)
 }
 
-fn add_paths_to(pl: &mut PictureList, maybe_entries: Result<ReadDir, Error>) {
+fn add_paths_to(pl: &mut Vec<PathBuf>, maybe_entries: Result<ReadDir, Error>) {
     if let Err(error) = maybe_entries {
         print!("Could not find entries: {}", error);
         return;
@@ -68,8 +81,7 @@ fn add_paths_to(pl: &mut PictureList, maybe_entries: Result<ReadDir, Error>) {
         }
 
         if IMAGE_EXTENSIONS.contains(&extension_str_for(&path).as_str()) {
-            println!("Found: {}", path.display());
-            pl.add(path);
+            pl.push(path);
         }
     }
 }
