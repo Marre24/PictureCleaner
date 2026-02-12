@@ -36,7 +36,7 @@ struct MyEguiApp {
 }
 
 impl MyEguiApp {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(_: &eframe::CreationContext<'_>) -> Self {
         Self::new_internal()
     }
 
@@ -122,7 +122,7 @@ impl MyEguiApp {
 }
 
 impl eframe::App for MyEguiApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
         match self.current_scene {
             Scene::PathChecker => self.path_searcher_scene(ctx),
             Scene::Deleter => self.image_deleter_scene(ctx),
