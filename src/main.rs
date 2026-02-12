@@ -74,22 +74,46 @@ impl MyEguiApp {
     fn image_deleter_scene(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("PURGE THESE PICTURES");
-            self.update_image(ui, ctx);
-            ui.horizontal_centered(|ui| {
-                ui.label("pictures left to purge: ");
-                ui.label(self.picture_handler.images_left());
-                if ui.button("DELETE").clicked() {
-                    self.picture_handler.delete();
-                }
-                if ui.button("SAVE").clicked() {
-                    self.picture_handler.save();
-                }
-                if ui.button("REVERT").clicked() {
-                    self.picture_handler.revert_last_action();
-                }
 
-                ui.label("pictures loaded: ");
-                ui.label(self.texture_manager.loaded_images());
+            self.update_image(ui, ctx);
+
+            ui.add_space(10.0);
+
+            ui.horizontal(|ui| {
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        if ui.button("DELETE").clicked() {
+                            self.picture_handler.delete();
+                        }
+                        if ui.button("SAVE").clicked() {
+                            self.picture_handler.save();
+                        }
+                        if ui.button("REVERT").clicked() {
+                            self.picture_handler.revert_last_action();
+                        }
+                    });
+                });
+
+                ui.separator();
+
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Left:");
+                        ui.strong(self.picture_handler.images_left());
+                        ui.separator();
+                        ui.label("Saved:");
+                        ui.strong(self.picture_handler.saved_images());
+                        ui.separator();
+                        ui.label("Deleted:");
+                        ui.strong(self.picture_handler.deleted_images());
+                        ui.separator();
+                        ui.label("Loaded:");
+                        ui.strong(self.texture_manager.loaded_images());
+                    });
+                });
+
+                ui.separator();
+
                 if ui.button("COMMIT PICTURES").clicked() {
                     self.picture_handler.commit(&self.path_field);
                     self.current_scene = Scene::PathChecker;

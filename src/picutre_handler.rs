@@ -51,4 +51,12 @@ impl PictureHandler {
     pub(crate) fn is_done(&self) -> bool {
         self.unchecked_pics.size() == 0
     }
+
+    pub(crate) fn saved_images(&self) -> String {
+        self.saved_pics.size().to_string()
+    }
+
+    pub(crate) fn deleted_images(&self) -> String {
+        self.deleted_pics.size().to_string()
+    }
 }
