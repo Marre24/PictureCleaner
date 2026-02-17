@@ -15,7 +15,7 @@ pub(crate) struct TextureHandler {
 }
 
 impl TextureHandler {
-    const MAX_SIZE: u32 = 200;
+    const MAX_SIZE: u32 = 600;
     const NUM_THREADS: usize = 2;
 
     pub(crate) fn get(&mut self, path: &Path, ctx: &egui::Context) -> Option<&TextureHandle> {
@@ -36,6 +36,9 @@ impl TextureHandler {
     pub(crate) fn init(&mut self, unchecked_pics: PictureList) {
         let pending = Arc::clone(&self.pending);
         let paths: Vec<PathBuf> = unchecked_pics.path_iterator().cloned().collect();
+        if paths.len() == 0 {
+            return;
+        }
 
         let chunk_size = (paths.len() + Self::NUM_THREADS - 1) / Self::NUM_THREADS;
 
@@ -81,7 +84,7 @@ impl TextureHandler {
             ((width as f32 * ratio) as u32, Self::MAX_SIZE)
         };
 
-        let resized = image.resize(new_width, new_height, image::imageops::FilterType::Triangle);
+        let resized = image.resize(new_width, new_height, image::imageops::FilterType::Lanczos3);
 
         let size = [resized.width() as usize, resized.height() as usize];
 

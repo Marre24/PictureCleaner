@@ -75,10 +75,6 @@ impl MyEguiApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("PURGE THESE PICTURES");
 
-            self.update_image(ui, ctx);
-
-            ui.add_space(10.0);
-
             ui.horizontal(|ui| {
                 ui.group(|ui| {
                     ui.horizontal(|ui| {
@@ -119,6 +115,10 @@ impl MyEguiApp {
                     self.current_scene = Scene::PathChecker;
                 }
             });
+
+            ui.add_space(10.0);
+
+            self.update_image(ui, ctx);
         });
     }
 
